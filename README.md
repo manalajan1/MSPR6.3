@@ -1,5 +1,3 @@
-# mspr6.1
-
 # MSPr6.1 - Pipeline de Données & API
 
 Ce projet, disponible sur [GitHub](https://github.com/MAHRAZ-Oussama/mspr6.1.git), a pour objectif de télécharger, nettoyer et stocker des données provenant de Kaggle dans une base de données PostgreSQL, puis de créer une API permettant d’exécuter des requêtes SQL et de visualiser les résultats. Ce dépôt est destiné aux membres de l’équipe utilisant macOS, Windows ou d'autres environnements.
@@ -7,7 +5,7 @@ Ce projet, disponible sur [GitHub](https://github.com/MAHRAZ-Oussama/mspr6.1.git
 ## Table des matières
 
 - [Vue d'ensemble](#vue-densemble)
-- [Prérequis](#prerequis)
+- [Prérequis](#prérequis)
 - [Installation et Configuration](#installation-et-configuration)
   - [1. Clonage du projet](#1-clonage-du-projet)
   - [2. Installation de Python et des dépendances](#2-installation-de-python-et-des-dépendances)
@@ -17,9 +15,11 @@ Ce projet, disponible sur [GitHub](https://github.com/MAHRAZ-Oussama/mspr6.1.git
   - [Téléchargement et nettoyage](#téléchargement-et-nettoyage)
   - [Stockage dans PostgreSQL](#stockage-dans-postgresql)
 - [API pour exécuter des requêtes SQL](#api-pour-exécuter-des-requêtes-sql)
+- [Visualisation / Tableau de Bord](#visualisation--tableau-de-bord)
 - [Utilisation Multi-Plateforme (macOS & Windows)](#utilisation-multi-plateforme-macos--windows)
 - [Sécurité et Bonnes Pratiques](#sécurité-et-bonnes-pratiques)
 - [Dépannage](#dépannage)
+- [Structure du dépôt](#structure-du-dépôt)
 - [Auteur / Équipe](#-auteur--équipe)
 
 ## Vue d'ensemble
@@ -39,11 +39,14 @@ Le projet se structure autour de trois modules principaux :
    - Mise en place d’une API REST avec FastAPI, permettant d’exécuter des requêtes SQL.
    - Une route `/query` qui retourne les résultats sous forme de JSON.
 
+4. **Visualisation / Tableau de Bord**  
+   - Un dashboard interactif réalisé avec Streamlit et Plotly pour visualiser les indicateurs clés (globalement et par pays).
+
 ## Prérequis
 
 - **Python** (version 3.6 ou ultérieure)
 - **PostgreSQL**
-- **Git** (pour cloner le dépôt, si nécessaire)
+- **Git** (pour cloner le dépôt)
 
 ### Bibliothèques Python
 
@@ -55,6 +58,8 @@ Les bibliothèques principales utilisées sont :
 - `psycopg2-binary`
 - `fastapi`
 - `uvicorn`
+- `streamlit`
+- `plotly`
 
 ## Installation et Configuration
 

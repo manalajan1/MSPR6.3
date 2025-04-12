@@ -1,3 +1,4 @@
+# store_data.py
 import os
 from sqlalchemy import create_engine
 import pandas as pd
@@ -28,12 +29,19 @@ for file_name, table_name in datasets.items():
     print(f"Chargement du fichier {file_path}...")
     
     # Lire le CSV dans un DataFrame pandas
-    df = pd.read_csv(file_path)
+    try:
+        df = pd.read_csv(file_path)
+    except Exception as e:
+        print(f"Erreur lors de la lecture du fichier {file_path}: {e}")
+        continue
     
     # Vous pouvez éventuellement effectuer des ajustements supplémentaires ici
     
-    # Stocker dans la base de données, remplacez la table si elle existe déjà
-    df.to_sql(table_name, engine, if_exists='replace', index=False)
-    print(f"Table '{table_name}' créée dans PostgreSQL avec {len(df)} enregistrements.")
+    # Stocker dans la base de données, remplacer la table si elle existe déjà
+    try:
+        df.to_sql(table_name, engine, if_exists='replace', index=False)
+        print(f"Table '{table_name}' créée dans PostgreSQL avec {len(df)} enregistrements.")
+    except Exception as e:
+        print(f"Erreur lors de l'insertion de la table {table_name}: {e}")
 
 print("Stockage terminé.")
