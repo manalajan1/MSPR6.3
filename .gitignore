@@ -8,3 +8,5 @@ env/
 *.json
 *.zip
 
+.env
+
