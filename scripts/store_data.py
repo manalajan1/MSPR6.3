@@ -35,9 +35,7 @@ for file_name, table_name in datasets.items():
         print(f"Erreur lors de la lecture du fichier {file_path}: {e}")
         continue
     
-    # Vous pouvez éventuellement effectuer des ajustements supplémentaires ici
-    
-    # Stocker dans la base de données, remplacer la table si elle existe déjà
+    # Stocker dans la base de données PostgreSQL
     try:
         df.to_sql(table_name, engine, if_exists='replace', index=False)
         print(f"Table '{table_name}' créée dans PostgreSQL avec {len(df)} enregistrements.")
