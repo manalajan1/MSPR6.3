@@ -110,7 +110,7 @@ with col1:
 
 with col2:
     st.markdown("<div class='metric-box' style='border-left: 5px solid green;'>", unsafe_allow_html=True)
-    st.metric("Gueris", f"{int(latest_df['total_gueris'].sum()):,}")
+    st.metric("Gueris", f"{int(latest_df['total_recovered'].sum()):,}")      
     st.markdown("</div>", unsafe_allow_html=True)
 
 with col3:
@@ -145,7 +145,7 @@ else:
     if metric == "Deces":
         color_col, scale, title = 'total_deaths', 'Reds', 'Décès par pays'
     else:
-        color_col, scale, title = 'total_gueris', 'Greens', 'Guéris par pays'
+        color_col, scale, title = 'total_recovered', 'Greens', 'Guéris par pays'
     fig_map = px.choropleth(latest_df, locations='country', locationmode='country names',
                             color=color_col, hover_name='country',
                             color_continuous_scale=scale, title=title)

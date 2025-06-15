@@ -11,16 +11,26 @@ if not DATABASE_URL:
 engine = create_engine(DATABASE_URL)
 cleaned_dir = os.path.join(os.getcwd(), "cleaned_data")
 
-#Covid
+# Covid
 covid_path = os.path.join(cleaned_dir, "cleaned_covid19_daily_dataset.csv")
 df_covid = pd.read_csv(covid_path)
 print(f"Injection COVID depuis {covid_path}…")
 
-
-df_covid = df_covid.rename(columns={
-    "total_recovered": "total_gueris"
-})
-df_covid = df_covid.drop(columns=["id"], errors="ignore")
+# Renommer les colonnes pour correspondre à la BDD
+rename_covid = {
+    "Country/Region": "country_region",
+    "country": "country_region",
+    "date": "date",
+    "total_cases": "total_cases",
+    "total_deaths": "total_deaths",
+    "total_recovered": "total_recovered",
+    "total_gueris": "total_recovered",
+    "id": "id"
+}
+df_covid = df_covid.rename(columns=rename_covid)
+# Garder uniquement les colonnes attendues
+covid_cols = ["country_region", "date", "total_cases", "total_deaths", "total_recovered"]
+df_covid = df_covid[covid_cols]
 
 try:
     df_covid.to_sql(
@@ -28,7 +38,6 @@ try:
         engine,
         if_exists="append",
         index=False,
-        # on précise le schema si nécessaire, ex: schema="public"
     )
     print(f" {len(df_covid)} lignes insérées dans covid19_daily")
 except Exception as e:
@@ -39,15 +48,21 @@ mpox_path = os.path.join(cleaned_dir, "cleaned_mpox_dataset.csv")
 df_mpox = pd.read_csv(mpox_path)
 print(f"\nInjection MPOX depuis {mpox_path}…")
 
-# On ne garde pas 'id', on renomme pour correspondrent aux colonnes PostgreSQL
-df_mpox = df_mpox.rename(columns={
-    "country_region": "Country/Region",
-    "date":           "Date",
-    "total_cases":    "Total_Cases",
-    "total_deaths":   "Total_Deaths",
-    "total_recovered":"Total_Gueris"
-})
-df_mpox = df_mpox.drop(columns=["id"], errors="ignore")
+# Renommer les colonnes pour correspondre à la BDD
+rename_mpox = {
+    "Country/Region": "country_region",
+    "country": "country_region",
+    "date": "date",
+    "total_cases": "total_cases",
+    "total_deaths": "total_deaths",
+    "total_recovered": "total_recovered",
+    "total_gueris": "total_recovered",
+    "id": "id"
+}
+df_mpox = df_mpox.rename(columns=rename_mpox)
+# Garder uniquement les colonnes attendues
+mpox_cols = ["country_region", "date", "total_cases", "total_deaths", "total_recovered"]
+df_mpox = df_mpox[mpox_cols]
 
 try:
     df_mpox.to_sql(
