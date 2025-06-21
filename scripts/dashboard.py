@@ -13,33 +13,52 @@ st.markdown(
     body, .main-header {
         font-family: 'Segoe UI', Arial, sans-serif;
         font-size: 1.1rem;
+        background: #23272b;
     }
     .main-header {
         text-align: center;
         font-size: 2.7rem;
         margin-top: 1rem;
         font-weight: bold;
-        color: #1976d2;
+        color: #fff;
+        letter-spacing: 1px;
     }
     .main-sub {
         text-align: center;
         font-size: 1.2rem;
-        color: #444;
+        color: #e0e6ed;
         margin-bottom: 1.5rem;
     }
-    .card {
-        background: #f5f7fa;
+    .card, .kpi-card {
+        background: linear-gradient(135deg, #2c3440 0%, #3a4252 100%);
         border-radius: 1rem;
         padding: 1.2rem;
         margin-bottom: 1rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        box-shadow: 0 2px 8px rgba(255,255,255,0.07);
         text-align: center;
+        color: #fff;
+    }
+    .kpi-title {
+        font-size: 1.1rem;
+        color: #fff;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    .kpi-value {
+        font-size: 2.1rem;
+        font-weight: bold;
+        color: #fff;
+    }
+    .kpi-desc {
+        font-size: 0.95rem;
+        color: #bbb;
+        margin-top: 0.3rem;
     }
     .section-header {
         font-size: 1.5rem;
         margin-top: 2rem;
         font-weight: 600;
-        color: #1976d2;
+        color: #fff;
     }
     .stMetric-value {
         font-size: 1.3rem !important;
@@ -47,21 +66,32 @@ st.markdown(
     .stTabs [role="tab"] {
         font-size: 1.1rem;
         font-weight: 600;
-        color: #1976d2;
-        background: #f5f7fa;
+        color: #fff;
+        background: #2c3440;
         border-radius: 8px 8px 0 0;
         margin-right: 0.5rem;
         padding: 0.7rem 1.5rem;
         border: none;
         outline: none;
+        transition: background 0.2s;
     }
     .stTabs [aria-selected="true"] {
-        background: #1976d2;
+        background: #fff;
+        color: #23272b;
+    }
+    .stDataFrame th, .stDataFrame td {
+        font-size: 1rem;
         color: #fff;
+        background: #2c3440;
     }
     *:focus {
-        outline: 2px solid #1976d2 !important;
+        outline: 2px solid #fff !important;
         outline-offset: 2px;
+    }
+    @media (max-width: 900px) {
+        .kpi-card { min-width: 120px; min-height: 90px; padding: 1rem 0.5rem; }
+        .main-header { font-size: 2rem; }
+        .section-header { font-size: 1.1rem; }
     }
     </style>
     """,
@@ -70,12 +100,14 @@ st.markdown(
 
 # --- Header ---
 st.markdown("""
-<div class='main-header'>Dashboard COVID-19 &amp; Mpox</div>
+<div class='main-header' style='background: linear-gradient(90deg, #23272b 0%, #1e3a5c 100%); border-radius: 1.2rem; padding: 1.2rem 0; margin-bottom: 0.5rem; box-shadow: 0 2px 8px rgba(30,58,92,0.10); color: #fff;'>
+Dashboard COVID-19 &amp; Mpox
+</div>
 <div class='main-sub'>Analyse, prédiction et visualisation interactive pour tous. Sélectionnez vos filtres à gauche et naviguez par le menu ci-dessus.</div>
 """, unsafe_allow_html=True)
 
 # --- Menu horizontal (onglets) ---
-tabs = st.tabs(["Accueil", "Visualisations", "Prédiction IA", "À propos"])
+tabs = st.tabs(["Accueil", "Visualisations", "Prédiction IA", "Tableau de données", "À propos"])
 
 # --- Sidebar (Filtres principaux) ---
 st.sidebar.title("Filtres principaux")
@@ -122,58 +154,108 @@ mask = (
 filtered_df = raw_df[mask]
 latest_df = filtered_df.sort_values('date').groupby('country', as_index=False).last()
 
-# --- Accueil ---
+# --- Accueil / KPI ---
 with tabs[0]:
-    st.markdown("<div class='section-header'>Indicateurs globaux</div>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.metric("Total Cas", f"{int(latest_df['total_cases'].sum()):,}")
-        st.markdown("</div>", unsafe_allow_html=True)
-    with col2:
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.metric("Guéris", f"{int(latest_df['total_recovered'].sum()):,}")
-        st.markdown("</div>", unsafe_allow_html=True)
-    with col3:
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.metric("Décès", f"{int(latest_df['total_deaths'].sum()):,}")
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-header'>Résumé des indicateurs clés</div>", unsafe_allow_html=True)
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    with kpi1:
+        st.markdown("<div class='kpi-card'><div class='kpi-title'>Total Cas</div><div class='kpi-value'>{:,}</div><div class='kpi-desc'>Nombre cumulé de cas</div></div>".format(int(latest_df['total_cases'].sum())), unsafe_allow_html=True)
+    with kpi2:
+        st.markdown("<div class='kpi-card'><div class='kpi-title'>Guéris</div><div class='kpi-value'>{:,}</div><div class='kpi-desc'>Total des guérisons</div></div>".format(int(latest_df['total_recovered'].sum())), unsafe_allow_html=True)
+    with kpi3:
+        st.markdown("<div class='kpi-card'><div class='kpi-title'>Décès</div><div class='kpi-value'>{:,}</div><div class='kpi-desc'>Total des décès</div></div>".format(int(latest_df['total_deaths'].sum())), unsafe_allow_html=True)
+    with kpi4:
+        st.markdown("<div class='kpi-card'><div class='kpi-title'>Pays analysés</div><div class='kpi-value'>{}</div><div class='kpi-desc'>Pays sélectionnés</div></div>".format(latest_df['country'].nunique()), unsafe_allow_html=True)
     st.divider()
     st.caption("Ces indicateurs sont calculés sur la période et les pays sélectionnés.")
 
-# --- Visualisations ---
+# --- Visualisations avancées ---
 with tabs[1]:
-    st.markdown("<div class='section-header'>Visualisations interactives</div>", unsafe_allow_html=True)
-    visu_type = st.radio("Type de visualisation", ["Carte des cas", "Comparaison des pays", "Détails par pays"], horizontal=True)
-    if visu_type == "Comparaison des pays":
+    st.markdown("<div class='section-header'>Carte et visualisations interactives</div>", unsafe_allow_html=True)
+    visu_type = st.radio("Type de visualisation", ["Carte mondiale", "Comparaison des pays", "Détails par pays"], horizontal=True)
+    # Palette harmonieuse : blanc, orange doux, gris anthracite
+    custom_palette = ["#fff", "#f7b267", "#6c757d"]
+    if visu_type == "Carte mondiale":
+        metric = st.radio("Métrique à afficher", ["Décès", "Guéris"], horizontal=True)
+        if metric == "Décès":
+            color_col, scale, title = 'total_deaths', custom_palette, 'Décès par pays'
+            colorbar_title = 'Décès'
+        else:
+            color_col, scale, title = 'total_recovered', ["#fff", "#7ed957", "#f7b267"], 'Guéris par pays'
+            colorbar_title = 'Guéris'
+        # Carte filtrée sur la date la plus récente (pas de date dans le tooltip)
+        map_df = latest_df.copy()
+        fig_map = px.choropleth(
+            map_df,
+            locations='country',
+            locationmode='country names',
+            color=color_col,
+            hover_name='country',
+            color_continuous_scale=scale,
+            title=title,
+            labels={color_col: colorbar_title},
+            hover_data={
+                'country': True,
+                color_col: ':,',
+                'total_cases': ':,' if 'total_cases' in map_df.columns else False,
+                'total_recovered': ':,' if 'total_recovered' in map_df.columns else False,
+                'total_deaths': ':,' if 'total_deaths' in map_df.columns else False
+            },
+            template='plotly',
+            height=550
+        )
+        fig_map.update_geos(
+            showcountries=True, countrycolor="#bdbdbd",
+            showcoastlines=True, coastlinecolor="#bdbdbd",
+            showframe=False,
+            projection_type="natural earth",
+            lataxis_range=[-60, 85]
+        )
+        fig_map.update_layout(
+            margin={"r":0,"t":40,"l":0,"b":0},
+            coloraxis_colorbar=dict(
+                title=colorbar_title,
+                tickformat=",.0f",
+                thickness=18,
+                len=0.6,
+                yanchor="middle",
+                y=0.5
+            ),
+            geo_bgcolor="#23272b",
+            paper_bgcolor="#23272b",
+            font_color="#fff",
+            legend=dict(bgcolor="#2c3440", font=dict(color="#fff")),
+            title_font=dict(color="#fff", size=22)
+        )
+        # Focus visuel sur sélection de pays
+        selected_country = st.selectbox("Focus sur un pays (optionnel)", ["Aucun"] + sorted(map_df['country'].unique()))
+        if selected_country != "Aucun":
+            fig_map.update_traces(
+                selectedpoints=[map_df[map_df['country'] == selected_country].index[0]],
+                selector=dict(type='choropleth'),
+                marker_line_width=2.5,
+                marker_line_color="#f7b267"
+            )
+        st.plotly_chart(fig_map, use_container_width=True)
+        st.caption("Carte mondiale interactive : survolez un pays pour voir les chiffres précis, sélectionnez un pays pour le mettre en avant, filtrez entre guérisons/décès. Palette harmonieuse, fond discret, responsive, accessible.")
+    elif visu_type == "Comparaison des pays":
         countries = sorted(filtered_df['country'].dropna().unique())
         sel = st.multiselect("Sélectionner pays à comparer", countries, default=countries[:3])
         if sel:
             comp_df = filtered_df[filtered_df['country'].isin(sel)]
             fig = px.line(comp_df, x='date', y='total_cases', color='country', title='Évolution des cas',
-                          color_discrete_sequence=px.colors.qualitative.Set1)
+                          color_discrete_sequence=custom_palette)
             st.plotly_chart(fig, use_container_width=True)
             st.caption("Courbe d'évolution des cas pour les pays sélectionnés.")
     elif visu_type == "Détails par pays":
         pays_unique = sorted(filtered_df['country'].unique())
         pays = st.selectbox("Pays", pays_unique)
         filt = filtered_df[filtered_df['country'] == pays]
-        fig1 = px.area(filt, x='date', y='total_cases', title=f'Cas pour {pays}', color_discrete_sequence=['#1976d2'])
-        fig2 = px.bar(filt, x='date', y='total_deaths', title=f'Décès pour {pays}', color_discrete_sequence=['#d32f2f'])
+        fig1 = px.area(filt, x='date', y='total_cases', title=f'Cas pour {pays}', color_discrete_sequence=["#f7b267"])
+        fig2 = px.bar(filt, x='date', y='total_deaths', title=f'Décès pour {pays}', color_discrete_sequence=["#fff"])
         st.plotly_chart(fig1, use_container_width=True)
         st.plotly_chart(fig2, use_container_width=True)
         st.caption(f"Détail des cas et décès pour {pays} sur la période sélectionnée.")
-    else:
-        metric = st.radio("Métrique", ["Décès", "Guéris"], horizontal=True)
-        if metric == "Décès":
-            color_col, scale, title = 'total_deaths', 'Reds', 'Décès par pays'
-        else:
-            color_col, scale, title = 'total_recovered', 'Greens', 'Guéris par pays'
-        fig_map = px.choropleth(latest_df, locations='country', locationmode='country names',
-                                color=color_col, hover_name='country',
-                                color_continuous_scale=scale, title=title)
-        st.plotly_chart(fig_map, use_container_width=True)
-        st.caption("Carte mondiale des cas cumulés sur la période et les pays sélectionnés.")
 
 # --- Fonction prédiction batch (API IA) ---
 def predict_batch(df):
@@ -217,15 +299,19 @@ with tabs[2]:
                 )
                 st.plotly_chart(fig_pred, use_container_width=True)
                 st.caption("Ce graphique montre la probabilité prédite par l'IA d'avoir plus de 10 000 cas pour chaque pays sélectionné. Plus la barre est foncée, plus le risque est élevé.")
-                for _, row in pred_df.iterrows():
-                    if pd.notnull(row["proba_pred"]):
-                        st.write(f"{row['country']} : {row['proba_pred']*100:.1f}% de chances d'avoir > 10 000 cas")
+                st.dataframe(pred_df[["country", "proba_pred"]].rename(columns={"country": "Pays", "proba_pred": "Proba IA (>10k cas)"}), use_container_width=True)
                 st.download_button("Télécharger les prédictions IA (CSV)", pred_df.to_csv(index=False), "predictions_ia.csv")
             else:
                 st.error("Aucune prédiction IA n'a pu être calculée (API non disponible ou erreur de données).")
 
-# --- À propos / Aide ---
+# --- Tableau de données ---
 with tabs[3]:
+    st.markdown("<div class='section-header'>Tableau de données filtrées</div>", unsafe_allow_html=True)
+    st.dataframe(filtered_df, use_container_width=True, height=400)
+    st.download_button("Exporter les données filtrées (CSV)", filtered_df.to_csv(index=False), "donnees_filtrees.csv")
+
+# --- À propos / Aide ---
+with tabs[4]:
     st.markdown("<div class='section-header'>À propos & Aide</div>", unsafe_allow_html=True)
     st.write("""
     - **Dashboard développé pour l'analyse et la prédiction COVID-19 & Mpox**
