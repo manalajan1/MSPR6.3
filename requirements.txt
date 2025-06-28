@@ -8,3 +8,5 @@ fastapi==0.103.2
 pydantic==1.10.13
 psycopg2
 uvicorn
+prophet
+scikit-learn

@@ -4,7 +4,9 @@ import pandas as pd
 import plotly.express as px
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
-import requests
+from prophet import Prophet
+from sklearn.metrics import mean_absolute_error
+import plotly.graph_objs as go
 
 # --- Modern CSS & Responsive ---
 st.markdown(
@@ -135,22 +137,12 @@ mpox_df  = load_table('mpox')
 
 maladie = st.sidebar.radio("Maladie", ["COVID-19", "Mpox"], index=0)
 df_dates = covid_df if maladie == "COVID-19" else mpox_df
-min_date = df_dates['date'].min().date()
-max_date = df_dates['date'].max().date()
-periode = st.sidebar.date_input("Période", value=(min_date, max_date), min_value=min_date, max_value=max_date)
-if isinstance(periode, tuple) and len(periode) == 2:
-    date_debut, date_fin = periode
-else:
-    date_debut, date_fin = min_date, max_date
+
 all_countries = sorted(df_dates['country'].dropna().unique())
 pays_sel = st.sidebar.multiselect("Pays", all_countries, default=all_countries[:3])
 
 raw_df = covid_df if maladie == 'COVID-19' else mpox_df
-mask = (
-    (raw_df['date'] >= pd.to_datetime(date_debut)) &
-    (raw_df['date'] <= pd.to_datetime(date_fin)) &
-    (raw_df['country'].isin(pays_sel))
-)
+mask = raw_df['country'].isin(pays_sel)
 filtered_df = raw_df[mask]
 latest_df = filtered_df.sort_values('date').groupby('country', as_index=False).last()
 
@@ -167,13 +159,12 @@ with tabs[0]:
     with kpi4:
         st.markdown("<div class='kpi-card'><div class='kpi-title'>Pays analysés</div><div class='kpi-value'>{}</div><div class='kpi-desc'>Pays sélectionnés</div></div>".format(latest_df['country'].nunique()), unsafe_allow_html=True)
     st.divider()
-    st.caption("Ces indicateurs sont calculés sur la période et les pays sélectionnés.")
+    st.caption("Ces indicateurs sont calculés sur tous les pays sélectionnés.")
 
 # --- Visualisations avancées ---
 with tabs[1]:
     st.markdown("<div class='section-header'>Carte et visualisations interactives</div>", unsafe_allow_html=True)
     visu_type = st.radio("Type de visualisation", ["Carte mondiale", "Comparaison des pays", "Détails par pays"], horizontal=True)
-    # Palette harmonieuse : blanc, orange doux, gris anthracite
     custom_palette = ["#fff", "#f7b267", "#6c757d"]
     if visu_type == "Carte mondiale":
         metric = st.radio("Métrique à afficher", ["Décès", "Guéris"], horizontal=True)
@@ -181,9 +172,9 @@ with tabs[1]:
             color_col, scale, title = 'total_deaths', custom_palette, 'Décès par pays'
             colorbar_title = 'Décès'
         else:
-            color_col, scale, title = 'total_recovered', ["#fff", "#7ed957", "#f7b267"], 'Guéris par pays'
+            color_col, scale = 'total_recovered', ["#fff", "#7ed957", "#f7b267"]
+            title = 'Guéris par pays'
             colorbar_title = 'Guéris'
-        # Carte filtrée sur la date la plus récente (pas de date dans le tooltip)
         map_df = latest_df.copy()
         fig_map = px.choropleth(
             map_df,
@@ -227,7 +218,6 @@ with tabs[1]:
             legend=dict(bgcolor="#2c3440", font=dict(color="#fff")),
             title_font=dict(color="#fff", size=22)
         )
-        # Focus visuel sur sélection de pays
         selected_country = st.selectbox("Focus sur un pays (optionnel)", ["Aucun"] + sorted(map_df['country'].unique()))
         if selected_country != "Aucun":
             fig_map.update_traces(
@@ -255,54 +245,56 @@ with tabs[1]:
         fig2 = px.bar(filt, x='date', y='total_deaths', title=f'Décès pour {pays}', color_discrete_sequence=["#fff"])
         st.plotly_chart(fig1, use_container_width=True)
         st.plotly_chart(fig2, use_container_width=True)
-        st.caption(f"Détail des cas et décès pour {pays} sur la période sélectionnée.")
+        st.caption(f"Détail des cas et décès pour {pays} sur tout l'historique.")
 
-# --- Fonction prédiction batch (API IA) ---
-def predict_batch(df):
-    url = "http://localhost:8000/predict"
-    preds = []
-    for _, row in df.iterrows():
-        data = {
-            "total_deaths": int(row.get("total_deaths", 0)),
-            "total_recovered": int(row.get("total_recovered", 0))
-        }
-        try:
-            r = requests.post(url, json=data, timeout=2)
-            if r.status_code == 200:
-                res = r.json()
-                preds.append(res["probability"])
-            else:
-                preds.append(None)
-        except Exception:
-            preds.append(None)
-    return preds
-
-# --- Prédiction IA ---
+# --- Prédiction Prophet sur 90 jours ---
 with tabs[2]:
-    st.markdown("<div class='section-header'>Prédiction IA interactive</div>", unsafe_allow_html=True)
-    st.info("Lancez la prédiction IA sur la période et les pays sélectionnés. Les résultats sont expliqués de façon simple.")
-    pred_df = latest_df.copy()
-    if len(pred_df) == 0:
-        st.warning("Aucune donnée à prédire pour la période et les pays sélectionnés.")
+    st.markdown("<div class='section-header'>Prédiction sur 90 jours (Prophet)</div>", unsafe_allow_html=True)
+    st.info("Sélectionnez un pays et une variable à prédire. Le modèle Prophet prédit l'évolution sur 90 jours sur tout l'historique du pays.")
+
+    pays_unique = sorted(raw_df['country'].unique())
+    pays = st.selectbox("Pays à prédire", pays_unique)
+    variable = st.selectbox(
+        "Variable à prédire",
+        ["total_cases", "total_deaths", "total_recovered"],
+        format_func=lambda x: {"total_cases":"Total cas", "total_deaths":"Total décès", "total_recovered":"Total guéris"}[x]
+    )
+
+    # Prend toutes les données du pays sélectionné, sans filtre de période
+    df_pred = raw_df[raw_df['country'] == pays][['date', variable]].dropna()
+    df_pred = df_pred.rename(columns={'date': 'ds', variable: 'y'})
+    df_pred = df_pred.sort_values('ds')
+
+    if len(df_pred) < 30:
+        st.warning("Pas assez de données pour entraîner Prophet (au moins 30 jours nécessaires).")
     else:
-        if st.button("Lancer la prédiction IA", type="primary"):
-            with st.spinner("Calcul des prédictions IA..."):
-                pred_df["proba_pred"] = predict_batch(pred_df)
-            if pred_df["proba_pred"].notnull().any() and (pred_df["proba_pred"].dropna() != None).any():
-                fig_pred = px.bar(
-                    pred_df, x="country", y="proba_pred",
-                    title="Probabilité d'avoir > 10 000 cas (par pays)",
-                    labels={"proba_pred": "Proba prédite"},
-                    color="proba_pred",
-                    color_continuous_scale=px.colors.sequential.Blues,
-                    hover_data={"country": True, "proba_pred": ':.2f'}
-                )
-                st.plotly_chart(fig_pred, use_container_width=True)
-                st.caption("Ce graphique montre la probabilité prédite par l'IA d'avoir plus de 10 000 cas pour chaque pays sélectionné. Plus la barre est foncée, plus le risque est élevé.")
-                st.dataframe(pred_df[["country", "proba_pred"]].rename(columns={"country": "Pays", "proba_pred": "Proba IA (>10k cas)"}), use_container_width=True)
-                st.download_button("Télécharger les prédictions IA (CSV)", pred_df.to_csv(index=False), "predictions_ia.csv")
-            else:
-                st.error("Aucune prédiction IA n'a pu être calculée (API non disponible ou erreur de données).")
+        with st.spinner("Calcul de la prédiction Prophet..."):
+            model = Prophet()
+            model.fit(df_pred)
+            future = model.make_future_dataframe(periods=90)
+            forecast = model.predict(future)
+
+        # Calcul MAE sur l'historique (alignement des dates)
+        merged = pd.merge(df_pred, forecast[['ds', 'yhat']], on='ds', how='inner')
+        y_true = merged['y']
+        y_pred = merged['yhat']
+        mae = mean_absolute_error(y_true, y_pred)
+
+        # Affichage Plotly
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=df_pred['ds'], y=df_pred['y'], mode='lines+markers', name='Historique'))
+        fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat'], mode='lines', name='Prédiction (90j)', line=dict(dash='dot')))
+        fig.update_layout(
+            title=f"Prédiction sur 90 jours pour {pays} - {variable.replace('_',' ').capitalize()}<br>MAE historique : {mae:.2f}",
+            xaxis_title="Date",
+            yaxis_title=variable.replace('_',' ').capitalize(),
+            legend=dict(bgcolor="#2c3440", font=dict(color="#fff")),
+            plot_bgcolor="#23272b",
+            paper_bgcolor="#23272b",
+            font_color="#fff"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption("Courbe historique (plein), prédiction Prophet sur 90 jours (pointillés). MAE = Erreur absolue moyenne sur l'historique.")
 
 # --- Tableau de données ---
 with tabs[3]:
