@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 from prophet import Prophet
 from sklearn.metrics import mean_absolute_error
 import plotly.graph_objs as go
+import requests
 
 # --- Modern CSS & Responsive ---
 st.markdown(
@@ -109,7 +110,7 @@ Dashboard COVID-19 &amp; Mpox
 """, unsafe_allow_html=True)
 
 # --- Menu horizontal (onglets) ---
-tabs = st.tabs(["Accueil", "Visualisations", "Prédiction IA", "Tableau de données", "À propos"])
+tabs = st.tabs(["Accueil", "Visualisations", "Prédiction IA", "Tableau de données",  "À propos"])
 
 # --- Sidebar (Filtres principaux) ---
 st.sidebar.title("Filtres principaux")
@@ -247,10 +248,10 @@ with tabs[1]:
         st.plotly_chart(fig2, use_container_width=True)
         st.caption(f"Détail des cas et décès pour {pays} sur tout l'historique.")
 
-# --- Prédiction Prophet sur 90 jours ---
+# --- Prédiction Prophet sur 3 mois & Prédiction IA RandomForest (API) ---
 with tabs[2]:
-    st.markdown("<div class='section-header'>Prédiction sur 90 jours (Prophet)</div>", unsafe_allow_html=True)
-    st.info("Sélectionnez un pays et une variable à prédire. Le modèle Prophet prédit l'évolution sur 90 jours sur tout l'historique du pays.")
+    st.markdown("<div class='section-header'>Prédiction sur 3 mois (Prophet)</div>", unsafe_allow_html=True)
+    st.info("Sélectionnez un pays et une variable à prédire. Le modèle Prophet prédit l'évolution sur 3 mois (données mensuelles).")
 
     pays_unique = sorted(raw_df['country'].unique())
     pays = st.selectbox("Pays à prédire", pays_unique)
@@ -265,14 +266,22 @@ with tabs[2]:
     df_pred = df_pred.rename(columns={'date': 'ds', variable: 'y'})
     df_pred = df_pred.sort_values('ds')
 
-    if len(df_pred) < 30:
-        st.warning("Pas assez de données pour entraîner Prophet (au moins 30 jours nécessaires).")
+    if len(df_pred) < 12:
+        st.warning("Pas assez de données pour entraîner Prophet (au moins 12 mois nécessaires).")
     else:
         with st.spinner("Calcul de la prédiction Prophet..."):
-            model = Prophet()
+            model = Prophet(
+                yearly_seasonality=True,
+                weekly_seasonality=False,
+                daily_seasonality=False,
+                changepoint_prior_scale=0.05
+            )
             model.fit(df_pred)
-            future = model.make_future_dataframe(periods=90)
+            # Prédire sur 3 mois (car données mensuelles)
+            future = model.make_future_dataframe(periods=3, freq='MS')
             forecast = model.predict(future)
+            # Lissage de la prédiction
+            forecast['yhat_smooth'] = forecast['yhat'].rolling(window=3, min_periods=1).mean()
 
         # Calcul MAE sur l'historique (alignement des dates)
         merged = pd.merge(df_pred, forecast[['ds', 'yhat']], on='ds', how='inner')
@@ -280,27 +289,84 @@ with tabs[2]:
         y_pred = merged['yhat']
         mae = mean_absolute_error(y_true, y_pred)
 
-        # Affichage Plotly
+        # Affichage Plotly : prédiction uniquement après la dernière date historique
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df_pred['ds'], y=df_pred['y'], mode='lines+markers', name='Historique'))
-        fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat'], mode='lines', name='Prédiction (90j)', line=dict(dash='dot')))
+        # Historique
+        fig.add_trace(go.Scatter(
+            x=df_pred['ds'], y=df_pred['y'],
+            mode='lines+markers', name='Historique'
+        ))
+        last_date = df_pred['ds'].max()
+        # Prédiction (ligne pointillée)
+        forecast_future = forecast[forecast['ds'] >= last_date]
+        fig.add_trace(go.Scatter(
+            x=forecast_future['ds'], y=forecast_future['yhat_smooth'],
+            mode='lines', name='Prédiction lissée', line=dict(dash='dot', color='red')
+        ))
+        # Points de prédiction (en rouge)
+        fig.add_trace(go.Scatter(
+            x=forecast_future['ds'], y=forecast_future['yhat_smooth'],
+            mode='markers', name='Points prédits', marker=dict(color='red', size=10, symbol='circle')
+        ))
+
+        # Colorer les labels des mois prédits en rouge
+        all_dates = list(df_pred['ds']) + list(forecast_future['ds'])
+        # Afficher un tick sur 2 pour plus de clarté
+        step = 2
+        tickvals = all_dates[::step]
+        ticktext = [
+            (f"<span style='color:red'>{d.strftime('%b %Y')}</span>" if d in list(forecast_future['ds']) else d.strftime('%b %Y'))
+            for d in tickvals
+        ]
+
         fig.update_layout(
-            title=f"Prédiction sur 90 jours pour {pays} - {variable.replace('_',' ').capitalize()}<br>MAE historique : {mae:.2f}",
+            title=f"Prédiction sur 3 mois pour {pays} - {variable.replace('_',' ').capitalize()}<br>MAE historique : {mae:.2f}",
             xaxis_title="Date",
             yaxis_title=variable.replace('_',' ').capitalize(),
             legend=dict(bgcolor="#2c3440", font=dict(color="#fff")),
             plot_bgcolor="#23272b",
             paper_bgcolor="#23272b",
-            font_color="#fff"
+            font_color="#fff",
+            xaxis=dict(
+                tickvals=tickvals,
+                ticktext=ticktext,
+                tickangle=45,  # Incline les labels pour la lisibilité
+                tickfont=dict(size=11),
+            )
         )
         st.plotly_chart(fig, use_container_width=True)
-        st.caption("Courbe historique (plein), prédiction Prophet sur 90 jours (pointillés). MAE = Erreur absolue moyenne sur l'historique.")
+        st.caption("Courbe historique (plein), prédiction Prophet lissée sur 3 mois (pointillés rouges), points prédits en rouge. Les mois prédits sont affichés en rouge sur l'axe horizontal.)")
+
+    # --- Prédiction IA RandomForest (API) ---
+    st.markdown("<div class='section-header'>Prédiction IA RandomForest (API)</div>", unsafe_allow_html=True)
+    st.info("Entrez le nombre total de décès et de guéris pour obtenir la prédiction IA (modèle RandomForest).")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        total_deaths = st.number_input("Total décès", min_value=0, value=0)
+    with col2:
+        total_recovered = st.number_input("Total guéris", min_value=0, value=0)
+
+    if st.button("Prédire (API IA)"):
+        data = {"total_deaths": total_deaths, "total_recovered": total_recovered}
+        try:
+            response = requests.post("http://127.0.0.1:8000/predict", json=data)
+            if response.status_code == 200:
+                result = response.json()
+                label = "Plus de 10 000 cas" if result["prediction"] == 1 else "Moins de 10 000 cas"
+                st.success(f"Prédiction IA : {label} (proba : {result['probability']:.2f})")
+            else:
+                st.error(f"Erreur API IA : {response.text}")
+        except Exception as e:
+            st.error(f"Erreur de connexion à l'API IA : {e}")
 
 # --- Tableau de données ---
 with tabs[3]:
     st.markdown("<div class='section-header'>Tableau de données filtrées</div>", unsafe_allow_html=True)
     st.dataframe(filtered_df, use_container_width=True, height=400)
     st.download_button("Exporter les données filtrées (CSV)", filtered_df.to_csv(index=False), "donnees_filtrees.csv")
+
+
 
 # --- À propos / Aide ---
 with tabs[4]:
@@ -314,3 +380,5 @@ with tabs[4]:
     - **Contact** : [Votre email ou lien GitHub]
     """)
     st.info("Pour toute question ou suggestion, contactez l'équipe projet.")
+    
+    

@@ -13,7 +13,6 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
 
-# Exemple : on utilise la table covid19_daily
 query = """
 SELECT * FROM covid19_daily
 WHERE total_cases IS NOT NULL AND total_deaths IS NOT NULL AND total_recovered IS NOT NULL
@@ -50,3 +49,11 @@ print(classification_report(y_test, y_pred))
 # 8. Sauvegarde du modèle
 joblib.dump(clf, "model_covid_rf.joblib")
 print("Modèle sauvegardé sous model_covid_rf.joblib")
+
+# 9. (Optionnel) Export des résultats de test dans un CSV
+results = pd.DataFrame({
+    "y_true": y_test,
+    "y_pred": y_pred
+})
+results.to_csv("rf_test_results.csv", index=False)
+print("Résultats de test exportés dans rf_test_results.csv")
