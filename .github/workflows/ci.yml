@@ -32,7 +32,12 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install pytest
+      - name: Set environment variables
+        run: |
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/mspr_db" >> $GITHUB_ENV
       - name: Run unit tests
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
         run: pytest tests/
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
