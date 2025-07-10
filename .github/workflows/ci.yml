@@ -42,7 +42,7 @@ jobs:
           PGPASSWORD: postgres
       - name: Insert test data
         run: |
-          psql -h localhost -U postgres -d mspr_db -c "INSERT INTO covid19_daily (total_cases, total_deaths, total_recovered) VALUES (100, 0, 80), (200, 1, 150), (300, 2, 250), (15000, 3, 12000), (20000, 4, 18000), (25000, 5, 22000), (30000, 6, 25000);"
+          psql -h localhost -U postgres -d mspr_db -c "INSERT INTO covid19_daily (total_cases, total_deaths, total_recovered) VALUES (100, 0, 80), (200, 1, 150), (300, 2, 250), (400, 1, 200), (500, 2, 300), (600, 3, 400), (700, 4, 500), (15000, 3, 12000), (20000, 4, 18000), (25000, 5, 22000), (30000, 6, 25000);"
         env:
           PGPASSWORD: postgres
       - name: Start dashboard (optionnel)
