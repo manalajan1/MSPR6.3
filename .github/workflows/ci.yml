@@ -42,13 +42,13 @@ jobs:
           PGPASSWORD: postgres
       - name: Insert test data
         run: |
-          psql -h localhost -U postgres -d mspr_db -c "INSERT INTO covid19_daily (total_cases, total_deaths, total_recovered) VALUES (100, 5, 80), (200, 10, 150);"
+          psql -h localhost -U postgres -d mspr_db -c "INSERT INTO covid19_daily (total_cases, total_deaths, total_recovered) VALUES (100, 0, 80), (200, 1, 150);"
         env:
           PGPASSWORD: postgres
-      # - name: Start dashboard (optionnel, décommente si tu veux tester le dashboard)
-      #   run: |
-      #     nohup streamlit run scripts/dashboard.py --server.port 8501 &
-      #   shell: bash
+      - name: Start dashboard (optionnel)
+        run: |
+          nohup streamlit run scripts/dashboard.py --server.port 8501 &
+        shell: bash
       - name: Run unit tests
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
