@@ -35,6 +35,15 @@ jobs:
       - name: Set environment variables
         run: |
           echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/mspr_db" >> $GITHUB_ENV
+      - name: Init test database
+        run: |
+          psql -h localhost -U postgres -d mspr_db -c "CREATE TABLE IF NOT EXISTS covid19_daily (id SERIAL PRIMARY KEY, total_cases INT, total_deaths INT, total_recovered INT);"
+        env:
+          PGPASSWORD: postgres
+      # - name: Start dashboard (optionnel, décommente si tu veux tester le dashboard)
+      #   run: |
+      #     nohup streamlit run scripts/dashboard.py --server.port 8501 &
+      #   shell: bash
       - name: Run unit tests
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
