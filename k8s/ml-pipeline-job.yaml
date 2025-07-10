@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ml-pipeline
+spec:
+  template:
+    metadata:
+      labels:
+        app: ml-pipeline
+    spec:
+      containers:
+      - name: ml-pipeline
+        image: kaidi2002/mspr6.1-ml-pipeline:latest
+        env:
+        - name: DATABASE_URL
+          value: postgresql://postgres:postgres@postgres:5432/mspr_db
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+      restartPolicy: Never

@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: mspr_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  wait-for-db:
+    image: busybox
+    depends_on:
+      - db
+    entrypoint: sh -c "until nc -z db 5432; do echo Waiting for db...; sleep 2; done"
+
+  ml-pipeline:
+    image: kaidi2002/mspr6.1-ml-pipeline:latest
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  api:
+    image: kaidi2002/mspr6.1-api:latest
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - ml-pipeline
+
+  dashboard:
+    image: kaidi2002/mspr6.1-dashboard:latest
+    env_file:
+      - .env
+    ports:
+      - "8501:8501"
+    depends_on:
+      - wait-for-db
+      - api
+    volumes:
+      - ./scripts:/app/scripts
+
+volumes:
+  db_data:

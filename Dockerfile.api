@@ -1,0 +1,14 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY api/ api/
+COPY scripts/ scripts/
+COPY cleaned_data/ cleaned_data/
+COPY requirements.txt .
+COPY .env .
+
+RUN ls -l /app/cleaned_data || echo "cleaned_data not found"
+RUN pip install --no-cache-dir -r requirements.txt
+
+CMD ["uvicorn", "api.ml_api:app", "--host", "0.0.0.0", "--port", "8000"]

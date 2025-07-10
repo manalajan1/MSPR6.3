@@ -41,6 +41,39 @@ st.markdown(
         text-align: center;
         color: #fff;
     }
+    .kpi-row {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    max-width: 950px;
+    margin-left: auto;
+    margin-right: auto;
+    width: fit-content;
+    }
+    .kpi-card {
+        width: 220px;
+        min-width: 220px;
+        max-width: 220px;
+        min-height: 150px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: linear-gradient(135deg, #2c3440 0%, #3a4252 100%);
+        border-radius: 1rem;
+        padding: 1.2rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(255,255,255,0.07);
+        text-align: center;
+        color: #fff;
+    }
+    @media (max-width: 900px) {
+        .kpi-row { flex-direction: column; gap: 1rem; width: 100%; }
+        .kpi-card { width: 100%; min-width: 120px; max-width: 100%; min-height: 90px; }
+    }
     .kpi-title {
         font-size: 1.1rem;
         color: #fff;
@@ -92,7 +125,8 @@ st.markdown(
         outline-offset: 2px;
     }
     @media (max-width: 900px) {
-        .kpi-card { min-width: 120px; min-height: 90px; padding: 1rem 0.5rem; }
+        .kpi-row { flex-direction: column; gap: 1rem; }
+        .kpi-card { max-width: 100%; min-width: 120px; min-height: 90px; }
         .main-header { font-size: 2rem; }
         .section-header { font-size: 1.1rem; }
     }
@@ -150,15 +184,33 @@ latest_df = filtered_df.sort_values('date').groupby('country', as_index=False).l
 # --- Accueil / KPI ---
 with tabs[0]:
     st.markdown("<div class='section-header'>Résumé des indicateurs clés</div>", unsafe_allow_html=True)
-    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    with kpi1:
-        st.markdown("<div class='kpi-card'><div class='kpi-title'>Total Cas</div><div class='kpi-value'>{:,}</div><div class='kpi-desc'>Nombre cumulé de cas</div></div>".format(int(latest_df['total_cases'].sum())), unsafe_allow_html=True)
-    with kpi2:
-        st.markdown("<div class='kpi-card'><div class='kpi-title'>Guéris</div><div class='kpi-value'>{:,}</div><div class='kpi-desc'>Total des guérisons</div></div>".format(int(latest_df['total_recovered'].sum())), unsafe_allow_html=True)
-    with kpi3:
-        st.markdown("<div class='kpi-card'><div class='kpi-title'>Décès</div><div class='kpi-value'>{:,}</div><div class='kpi-desc'>Total des décès</div></div>".format(int(latest_df['total_deaths'].sum())), unsafe_allow_html=True)
-    with kpi4:
-        st.markdown("<div class='kpi-card'><div class='kpi-title'>Pays analysés</div><div class='kpi-value'>{}</div><div class='kpi-desc'>Pays sélectionnés</div></div>".format(latest_df['country'].nunique()), unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div class="kpi-row">
+            <div class="kpi-card">
+                <div class="kpi-title">Total Cas</div>
+                <div class="kpi-value">{int(latest_df['total_cases'].sum()):,}</div>
+                <div class="kpi-desc">Nombre cumulé de cas</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Guéris</div>
+                <div class="kpi-value">{int(latest_df['total_recovered'].sum()):,}</div>
+                <div class="kpi-desc">Total des guérisons</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Décès</div>
+                <div class="kpi-value">{int(latest_df['total_deaths'].sum()):,}</div>
+                <div class="kpi-desc">Total des décès</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Pays analysés</div>
+                <div class="kpi-value">{latest_df['country'].nunique()}</div>
+                <div class="kpi-desc">Pays sélectionnés</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     st.divider()
     st.caption("Ces indicateurs sont calculés sur tous les pays sélectionnés.")
 
@@ -248,10 +300,11 @@ with tabs[1]:
         st.plotly_chart(fig2, use_container_width=True)
         st.caption(f"Détail des cas et décès pour {pays} sur tout l'historique.")
 
+
 # --- Prédiction Prophet sur 3 mois & Prédiction IA RandomForest (API) ---
 with tabs[2]:
-    st.markdown("<div class='section-header'>Prédiction sur 3 mois (Prophet)</div>", unsafe_allow_html=True)
-    st.info("Sélectionnez un pays et une variable à prédire. Le modèle Prophet prédit l'évolution sur 3 mois (données mensuelles).")
+    st.markdown("<div class='section-header'>Prédiction sur 3 mois </div>", unsafe_allow_html=True)
+    st.info("Sélectionnez un pays et une variable à prédire. ")
 
     pays_unique = sorted(raw_df['country'].unique())
     pays = st.selectbox("Pays à prédire", pays_unique)
@@ -261,57 +314,72 @@ with tabs[2]:
         format_func=lambda x: {"total_cases":"Total cas", "total_deaths":"Total décès", "total_recovered":"Total guéris"}[x]
     )
 
+    # Forcer le type datetime sur la colonne d'origine (sécurité globale)
+    raw_df['date'] = pd.to_datetime(raw_df['date'], errors='coerce')
+
     # Prend toutes les données du pays sélectionné, sans filtre de période
     df_pred = raw_df[raw_df['country'] == pays][['date', variable]].dropna()
     df_pred = df_pred.rename(columns={'date': 'ds', variable: 'y'})
     df_pred = df_pred.sort_values('ds')
 
+    # Agrégation mensuelle pour tous les pays (même si déjà mensuel)
+    df_pred = df_pred.resample('M', on='ds').sum().reset_index()
+    df_pred = df_pred.sort_values('ds')
+
+    # Limite à 36 derniers points pour accélérer Prophet
+    if len(df_pred) > 36:
+        df_pred = df_pred.tail(36)
+
     if len(df_pred) < 12:
         st.warning("Pas assez de données pour entraîner Prophet (au moins 12 mois nécessaires).")
     else:
-        with st.spinner("Calcul de la prédiction Prophet..."):
+        @st.cache_data(show_spinner="Calcul de la prédiction Prophet...")
+        def prophet_predict_fast(df_pred, periods=3):
             model = Prophet(
                 yearly_seasonality=True,
                 weekly_seasonality=False,
                 daily_seasonality=False,
-                changepoint_prior_scale=0.05
+                changepoint_prior_scale=0.05,
+                n_changepoints=10,
+                mcmc_samples=0
             )
             model.fit(df_pred)
-            # Prédire sur 3 mois (car données mensuelles)
-            future = model.make_future_dataframe(periods=3, freq='MS')
+            future = model.make_future_dataframe(periods=periods, freq='MS')
             forecast = model.predict(future)
-            # Lissage de la prédiction
             forecast['yhat_smooth'] = forecast['yhat'].rolling(window=3, min_periods=1).mean()
+            return forecast
 
-        # Calcul MAE sur l'historique (alignement des dates)
+        forecast = prophet_predict_fast(df_pred)
         merged = pd.merge(df_pred, forecast[['ds', 'yhat']], on='ds', how='inner')
         y_true = merged['y']
         y_pred = merged['yhat']
         mae = mean_absolute_error(y_true, y_pred)
+        mae_relative = mae / y_true.mean() if y_true.mean() else None
+        if mae_relative is not None:
+            st.caption(f"MAE relative : {mae_relative:.5f}")
+            mae_relative_str = f"{mae_relative:.5f}"
+        else:
+            st.caption("MAE relative : non calculable (moyenne nulle ou NaN)")
+            mae_relative_str = "N/A"
 
         # Affichage Plotly : prédiction uniquement après la dernière date historique
         fig = go.Figure()
-        # Historique
         fig.add_trace(go.Scatter(
             x=df_pred['ds'], y=df_pred['y'],
             mode='lines+markers', name='Historique'
         ))
         last_date = df_pred['ds'].max()
-        # Prédiction (ligne pointillée)
         forecast_future = forecast[forecast['ds'] >= last_date]
         fig.add_trace(go.Scatter(
             x=forecast_future['ds'], y=forecast_future['yhat_smooth'],
             mode='lines', name='Prédiction lissée', line=dict(dash='dot', color='red')
         ))
-        # Points de prédiction (en rouge)
         fig.add_trace(go.Scatter(
             x=forecast_future['ds'], y=forecast_future['yhat_smooth'],
             mode='markers', name='Points prédits', marker=dict(color='red', size=10, symbol='circle')
         ))
 
-        # Colorer les labels des mois prédits en rouge
         all_dates = list(df_pred['ds']) + list(forecast_future['ds'])
-        # Afficher un tick sur 2 pour plus de clarté
         step = 2
         tickvals = all_dates[::step]
         ticktext = [
@@ -320,7 +388,7 @@ with tabs[2]:
         ]
 
         fig.update_layout(
-            title=f"Prédiction sur 3 mois pour {pays} - {variable.replace('_',' ').capitalize()}<br>MAE historique : {mae:.2f}",
+            title=f"Prédiction sur 3 mois pour {pays} - {variable.replace('_',' ').capitalize()}<br>MAE historique : {mae:.2f} ({mae_relative_str})",
             xaxis_title="Date",
             yaxis_title=variable.replace('_',' ').capitalize(),
             legend=dict(bgcolor="#2c3440", font=dict(color="#fff")),
@@ -330,43 +398,20 @@ with tabs[2]:
             xaxis=dict(
                 tickvals=tickvals,
                 ticktext=ticktext,
-                tickangle=45,  # Incline les labels pour la lisibilité
+                tickangle=45,
                 tickfont=dict(size=11),
             )
         )
         st.plotly_chart(fig, use_container_width=True)
         st.caption("Courbe historique (plein), prédiction Prophet lissée sur 3 mois (pointillés rouges), points prédits en rouge. Les mois prédits sont affichés en rouge sur l'axe horizontal.)")
 
-    # --- Prédiction IA RandomForest (API) ---
-    st.markdown("<div class='section-header'>Prédiction IA RandomForest (API)</div>", unsafe_allow_html=True)
-    st.info("Entrez le nombre total de décès et de guéris pour obtenir la prédiction IA (modèle RandomForest).")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        total_deaths = st.number_input("Total décès", min_value=0, value=0)
-    with col2:
-        total_recovered = st.number_input("Total guéris", min_value=0, value=0)
-
-    if st.button("Prédire (API IA)"):
-        data = {"total_deaths": total_deaths, "total_recovered": total_recovered}
-        try:
-            response = requests.post("http://127.0.0.1:8000/predict", json=data)
-            if response.status_code == 200:
-                result = response.json()
-                label = "Plus de 10 000 cas" if result["prediction"] == 1 else "Moins de 10 000 cas"
-                st.success(f"Prédiction IA : {label} (proba : {result['probability']:.2f})")
-            else:
-                st.error(f"Erreur API IA : {response.text}")
-        except Exception as e:
-            st.error(f"Erreur de connexion à l'API IA : {e}")
 
 # --- Tableau de données ---
 with tabs[3]:
     st.markdown("<div class='section-header'>Tableau de données filtrées</div>", unsafe_allow_html=True)
     st.dataframe(filtered_df, use_container_width=True, height=400)
     st.download_button("Exporter les données filtrées (CSV)", filtered_df.to_csv(index=False), "donnees_filtrees.csv")
-
-
 
 # --- À propos / Aide ---
 with tabs[4]:
@@ -377,8 +422,5 @@ with tabs[4]:
     - **Accessibilité** : navigation clavier, contraste élevé, polices lisibles
     - **Graphiques interactifs** : zoom, export, tooltips
     - **Prédictions IA** : explications simples, code couleur, export CSV
-    - **Contact** : [Votre email ou lien GitHub]
     """)
     st.info("Pour toute question ou suggestion, contactez l'équipe projet.")
-    
-    

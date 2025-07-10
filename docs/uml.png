@@ -1,0 +1,16 @@
+# Diagramme UML du projet
+
+Ce fichier doit contenir un diagramme UML représentant :
+- Les entités principales (base de données, API, pipeline, dashboard)
+- Les relations entre les modules
+
+**À faire :**
+- Ouvre https://app.diagrams.net/
+- Représente :
+  - Table `covid19_daily` (PostgreSQL)
+  - Pipeline ML (lecture BDD, entraînement, export modèle)
+  - API (expose le modèle, reçoit les requêtes)
+  - Dashboard (consomme l'API, affiche les résultats)
+- Exporte en PNG et remplace ce fichier
+
+*Ce fichier est un placeholder, à remplacer par ton image UML.*

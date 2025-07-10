@@ -7,7 +7,7 @@ app = FastAPI()
 
 # Charger le modèle entraîné
 try:
-    model = joblib.load("scripts/model_covid_rf.joblib")
+    model = joblib.load("model_covid_rf.joblib")
 except Exception as e:
     model = None
     print(f"Erreur lors du chargement du modèle : {e}")
