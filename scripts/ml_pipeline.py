@@ -31,7 +31,7 @@ def train_model():
     y = df['target']
 
     # 3. Équilibrage des classes (optionnel)
-    smote = SMOTE(random_state=42)
+    smote = SMOTE(random_state=42, k_neighbors=2)
     X_res, y_res = smote.fit_resample(X, y)
 
     # 4. Split 60% train / 40% test
