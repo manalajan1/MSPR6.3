@@ -31,7 +31,7 @@ def train_model():
     y = df['target']
 
     # 3. Équilibrage des classes (optionnel)
-    smote = SMOTE(random_state=42, k_neighbors=2)
+    smote = SMOTE(random_state=42)
     X_res, y_res = smote.fit_resample(X, y)
 
     # 4. Split 60% train / 40% test
@@ -39,9 +39,12 @@ def train_model():
 
     # 5. Cross-validation sur le train
     clf = RandomForestClassifier(random_state=42)
-    cross_val = cross_val_score(clf, X_train, y_train, cv=5, scoring='f1')
-    print(f"F1-score cross-validation (train): {cross_val.mean():.3f}")
-
+    n_splits = min(5, len(X_train))
+    if n_splits > 1:
+        cross_val = cross_val_score(clf, X_train, y_train, cv=n_splits, scoring='f1')
+        print(f"F1-score cross-validation (train): {cross_val.mean():.3f}")
+    else:
+        print("Pas assez d'échantillons pour la cross-validation.")
     # 6. Entraînement du modèle
     clf.fit(X_train, y_train)
 
