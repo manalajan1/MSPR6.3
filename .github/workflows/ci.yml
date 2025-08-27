@@ -113,3 +113,9 @@ jobs:
             123manal/mspr6.1-dashboard:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Debug workspace files
+        run: |
+          echo "Contenu du dossier cleaned_data :"
+          ls -l cleaned_data
+          echo "Contenu du workspace :"
+          ls -l
