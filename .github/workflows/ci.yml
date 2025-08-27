@@ -116,6 +116,6 @@ jobs:
       - name: Debug workspace files
         run: |
           echo "Contenu du dossier cleaned_data :"
-          ls -l cleaned_data
+          ls -l cleaned_data || echo "cleaned_data absent"
           echo "Contenu du workspace :"
           ls -l
