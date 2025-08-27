@@ -10,7 +10,7 @@ spec:
     spec:
       containers:
       - name: ml-pipeline
-        image: kaidi2002/mspr6.1-ml-pipeline:latest
+        image: manal2002/mspr6.1-ml-pipeline:latest
         env:
         - name: DATABASE_URL
           value: postgresql://postgres:postgres@postgres:5432/mspr_db

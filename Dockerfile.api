@@ -9,6 +9,6 @@ COPY requirements.txt .
 COPY .env .
 
 RUN ls -l /app/cleaned_data || echo "cleaned_data not found"
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --default-timeout=300 --retries 5 -r requirements.txt
 
 CMD ["uvicorn", "api.ml_api:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
 
@@ -19,14 +19,14 @@ services:
     entrypoint: sh -c "until nc -z db 5432; do echo Waiting for db...; sleep 2; done"
 
   ml-pipeline:
-    image: kaidi2002/mspr6.1-ml-pipeline:latest
+    image: manal2002/mspr6.1-ml-pipeline:latest
     env_file:
       - .env
     depends_on:
       - db
 
   api:
-    image: kaidi2002/mspr6.1-api:latest
+    image: manal2002/mspr6.1-api:latest
     env_file:
       - .env
     ports:
@@ -36,7 +36,7 @@ services:
       - ml-pipeline
 
   dashboard:
-    image: kaidi2002/mspr6.1-dashboard:latest
+    image: manal2002/mspr6.1-dashboard:latest
     env_file:
       - .env
     ports:

@@ -6,3 +6,4 @@ from ml_pipeline import train_model
 
 def test_train_model():
     assert train_model() is not None
+    

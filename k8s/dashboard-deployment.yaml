@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: dashboard
-        image: kaidi2002/mspr6.1-dashboard:latest
+        image: manal2002/mspr6.1-dashboard:latest
         ports:
         - containerPort: 8501
         env:
